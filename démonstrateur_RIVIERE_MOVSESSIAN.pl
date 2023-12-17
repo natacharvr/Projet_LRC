@@ -1,3 +1,13 @@
+compteur(1).
+
+premiere_etape([], [], []).
+premiere_etape(Tbox, Abi, Abr) :- 
+	verification_Abox(Abi, Abr),
+	verification_Tbox(Tbox),
+	autoref(TBox),
+	traitement_Abox(),
+	traitement_Tbox(TBox, TBox2).
+% TODO faire en sorte que le paramètre Tbox soit modifié par traitement_Tbox
 /* Vérification syntaxique et sémantique */
 
 concept(ConceptAtom) :- cnamea(ConceptAtom).
@@ -20,13 +30,15 @@ verification_Tbox([(C, C1) | L]) :-
 instanceC(I,C) :- iname(I), concept(C).
 instanceR(R,C) :- rname(R), concept(C).
 
-verification_Abox([]).
-verification_Abox([(I, C) | L]) :- instanceC(I, C), verification_Abox(L).
-verification_Abox([(R, C) | L]) :- instanceR(R, C), verification_Abox(L).
+verification_Abox(AboxC, AboxR) :- verification_AboxC(AboxC), verification_AboxR(AboxR).
+verification_AboxC([]).
+verification_AboxC([(I, C) | L]) :- instanceC(I, C), verification_AboxC(L).
+verification_AboxR([]).
+verification_AboxR([(R, C) | L]) :- instanceR(R, C), verification_AboxR(L).
 
 /* Vérification auto référencement */
-autoref([]). % On lui fournit la liste des concepts complexes
-autoref([ConceptComplex| L]) :- equiv(ConceptComplex, DefConceptComplex), pas_autoref(ConceptComplex, DefConceptComplex), autoref(L).
+autoref([]). % On lui fournit la Tbox
+autoref([(ConceptComplex, _)| L]) :- equiv(ConceptComplex, DefConceptComplex), pas_autoref(ConceptComplex, DefConceptComplex), autoref(L).
 
 pas_autoref(C, C1) :- C \== C1, cnamea(C1).
 pas_autoref(C, C1) :- C \== C1, equiv(C1, C2), pas_autoref(C, C2). % Ici on ne précise pas que C1 est un concept non atomique, car on sait qu'il n'est pas atomique (clause précédente)
@@ -177,13 +189,28 @@ acquisition_prop_type2(Abi, [(Inst, NegDefC) |Abi1], _) :-
 % TROISIEME PARTIE
 % ALgorithme de résolution basée sur la méthode des tableaux 
 % On doit montrer que Abe est insatisfiable
-compteur(1).
 
 troisieme_etape(Abi,Abr) :-
 	tri_Abox(Abi,Lie,Lpt,Li,Lu,Ls),
 	resolution(Lie,Lpt,Li,Lu,Ls,Abr),
 	nl,write('Youpiiiiii, on a demontre la proposition initiale !!!').
 
+tri_Abox([], [], [], [], [], []).
+
+tri_Abox([(I, some(R,C)) | Abi], [(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls) :-
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+
+tri_Abox([(I, all(R,C)) | Abi], Lie, [(I, all(R,C)) | Lpt], Li, Lu, Ls) :- 
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+
+tri_Abox([(I, and(C1, C2)) | Abi], Lie, Lpt, [(I, and(C1, C2)) | Li], Lu, Ls) :- 
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+
+tri_Abox([(I, or(C1, C2)) | Abi], Lie, Lpt, Li, [(I, or(C1, C2)) | Lu], Ls) :- 
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+
+tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :- 
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
 
 
 % Utilitaires fournis 
