@@ -195,7 +195,7 @@ troisieme_etape(Abi,Abr) :-
 	resolution(Lie,Lpt,Li,Lu,Ls,Abr),
 	nl,write('Youpiiiiii, on a demontre la proposition initiale !!!').
 
-tri_Abox([], [], [], [], [], []).
+tri_Abox([], _, _, _, _, _).
 % ---- some -----
 tri_Abox([(I, some(R,C)) | Abi], [(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls) :-
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
