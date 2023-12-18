@@ -108,7 +108,7 @@ programme :- premiere_etape(Tbox, Abi, Abr),
 	deuxieme_etape(Abi, Abi1, Tbox),
 	troisieme_etape(Abi1, Abr).
 
-% DEUXIEME PARTIE 
+% ------------------------------------------------------ DEUXIEME PARTIE -------------------------------------------------------- 
 
 % Code fourni
 deuxieme_etape(Abi,Abi1,Tbox) :- saisie_et_traitement_prop_a_demontrer(Abi,Abi1,Tbox).
@@ -186,7 +186,7 @@ acquisition_prop_type2(Abi, [(Inst, NegDefC) |Abi1], _) :-
 % acquisition_prop_type_2 réalise l'acquisition d'une proposition de type 2 ( C1 n C2 = vide ) puis formate ( exists inst, inst : C1 and C2, remplacer récursivement les identificateurs de conccepts complexes par leur définition puis fnn)
 % La liste représentant les assertions de concepts est complétée.
 
-% TROISIEME PARTIE
+% ---------------------------------------------- TROISIEME PARTIE -------------------------------------------------------
 % ALgorithme de résolution basée sur la méthode des tableaux 
 % On doit montrer que Abe est insatisfiable
 
@@ -196,24 +196,127 @@ troisieme_etape(Abi,Abr) :-
 	nl,write('Youpiiiiii, on a demontre la proposition initiale !!!').
 
 tri_Abox([], [], [], [], [], []).
-
+% ---- some -----
 tri_Abox([(I, some(R,C)) | Abi], [(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls) :-
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
-
+% ---- all ----
 tri_Abox([(I, all(R,C)) | Abi], Lie, [(I, all(R,C)) | Lpt], Li, Lu, Ls) :- 
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
-
+% ---- and ----
 tri_Abox([(I, and(C1, C2)) | Abi], Lie, Lpt, [(I, and(C1, C2)) | Li], Lu, Ls) :- 
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
-
+% ---- or ----
 tri_Abox([(I, or(C1, C2)) | Abi], Lie, Lpt, Li, [(I, or(C1, C2)) | Lu], Ls) :- 
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
-
+% ---- autre ----
 tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :- 
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
 
 
-% Utilitaires fournis 
+resolution([],[],[],[],[],[]).
+
+resolution(Lie,Lpt,Li,Lu,Ls,Abr) :- 
+	no_clash(Lie,Lpt,Li,Lu,Ls,Abr),
+	complete_some(Lie,Lpt,Li,Lu,Ls,Abr),
+	transformation_and(Lie,Lpt,Li,Lu,Ls,Abr),
+	deduction_all(Lie,Lpt,Li,Lu,Ls,Abr),
+	transformation_or(Lie,Lpt,Li,Lu,Ls,Abr).
+
+no_clash(Lie,Lpt,Li,Lu,Ls,Abr) :- 
+	no_clash(Lie),
+	no_clash(Lpt),
+	no_clash(Li),
+	no_clash(Lu),
+	no_clash(Ls).
+
+no_clash([]).
+no_clash(L) :- 
+	\+ clash(L).
+
+clash([]) :- fail.
+
+clash([(I,C) | L]) :- 
+	nnf(not(C), C1),
+	member((I, C1), L).
+
+clash([_ | L]) :- 
+	clash(L).
+
+complete_some([],Lpt,Li,Lu,Ls,Abr).
+complete_some([(I, some(R,C)) | Lie],Lpt,Li,Lu,Ls,Abr) :- 
+	genere(Nom),
+	evolue((Nom, C), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
+	resolution( Lie1, Lpt1, Li1, Lu1, Ls1, [(I, Nom, R) | Abr]).
+
+transformation_and(Lie,Lpt,[],Lu,Ls,Abr).
+transformation_and(Lie,Lpt,[(I, and(C1, C2)) | Li], Lu,Ls,Abr) :- 
+	evolue((I, C1), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
+	evolue((I, C2), Lie1, Lpt1, Li1, Lu1, Ls1, Lie2, Lpt2, Li2, Lu2, Ls2),
+	resolution(Lie2, Lpt2, Li2, Lu2, Ls2, Abr).
+
+% TODO je ne suis pas sûre que j'ai le droit de faire ce que je fais, est ce que ça fit bien dans un OU. Si ça fait partie de la liste je boucle, sinon je passe à autre chose 
+deduction_all(Lie,[],Li,Lu,Ls,Abr).
+deduction_all(Lie,[(I, all(R,C)) | Lpt],Li,Lu,Ls,Abr) :-
+	member((I, B, R), Abr),
+	evolue((B, C), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
+	enleve((I,B,R), Abr, Abr1),
+	deduction_all(Lie1, [(I, all(R,C)) | Lpt1], Li1, Lu1, Ls1, Abr1).
+
+deduction_all(Lie,[(I, all(R,C)) | Lpt],Li,Lu,Ls,Abr) :-
+	\+ member((I, B, R), Abr), % Même pas forcément nécéssaire, si on est dans cette branche c'est que le test a échoué dans le précédent
+	resolution(Lie1, Lpt1, Li1, Lu1, Ls1, Abr1).
+
+transformation_or(Lie,Lpt,Li,[],Ls,Abr).
+transformation_or(Lie,Lpt,Li,Lu,Ls,Abr) :- 
+	evolue((I, C1), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
+	evolue((I, C2), Lie, Lpt, Li, Lu, Ls, Lie2, Lpt2, Li2, Lu2, Ls2),
+	resolution(Lie2, Lpt2, Li2, Lu2, Ls2, Abr),
+	resolution(Lie1, Lpt1, Li1, Lu1, Ls1, Abr).
+
+
+% ---- evolue(A, Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1) ----
+% A représente une nouvelle assertion de concepts à intégrer dans l’une des listes Lie, Lpt,
+% Li, Lu ou Ls qui décrivent les assertions de concepts de la Abox étendue et Lie1, Lpt1,
+% Li1,Lu1 et Ls1 représentent les nouvelles listes mises à jour.
+
+% ---- some ----
+evolue((I, some(R,C)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :- 
+	member((I, some(R,C)), Lie).
+
+% le test d'appartenance n'est pas nécéssaire car si la proposition ne correspond pas au prédicat précédent, c'est qu'il n'est pas dans la liste TODO vérifier
+evolue((I, some(R,C)), Lie, Lpt, Li, Lu, Ls, [(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls).
+
+% ---- all ----
+evolue((I, all(R,C)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :-
+	member((I, all(R,C)), Lpt).
+
+evolue((I, all(R,C)), Lie, Lpt, Li, Lu, Ls, Lie, [(I, all(R,C)) | Lpt], Li, Lu, Ls).
+
+% ---- and ----
+evolue((I, and(C1,C2)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :- 
+	member((I, and(C1,C2)), Li).
+
+evolue((I, and(C1,C2)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, [(I, and(C1, C2)) | Li], Lu, Ls).
+
+% ---- or ----
+evolue((I, or(C1,C2)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :-
+	member((I, or(C1,C2)), Lu).
+
+evolue((I, or(C1,C2)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, [(I, or(C1, C2)) | Lu], Ls).
+
+% ---- autre ----
+evolue(A, Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :-
+	member(A, Ls).
+
+evolue(A, Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, [A | Ls]).
+
+
+
+affiche_evolution_Abox(Ls1, Lie1, Lpt1, Li1, Lu1, Abr1, Ls2, Lie2, Lpt2, Li2, Lu2, Abr2)
+
+
+
+% ------------------------------------------------------- Utilitaires fournis ---------------------------------------------
 genere(Nom) :- compteur(V),nombre(V,L1),
 	concat([105,110,115,116],L1,L2),
 	V1 is V+1,

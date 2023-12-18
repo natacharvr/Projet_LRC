@@ -6,4 +6,7 @@
 - Est on sûrs des paramètres de autoref ?
 - Est ce que le fail dans la saisie fait bien ce à quoi me m'attends ?
 - TESTER
-- Partie 3 (sauf tri_Abox qui est fait youhou)
+- Affichage
+- checker les TODO
+- comment se trouve la solution au problème ?
+- Est ce qu'il faut gérer le cas  ∀R.C et <b, a> : R ?
