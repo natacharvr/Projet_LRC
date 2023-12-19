@@ -232,21 +232,26 @@ tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :-
 % [(a, all(r,c)), (a, and(c, c)), (a, c), (a, or(c,c)), (a, some(r,c))]
 
 resolution([],[],[],[], Ls,_) :- 
-	no_clash(Ls).
+	write('final'), nl,
+	no_clash(Ls), !.
 
 resolution([], [], [], Lu, Ls, Abr) :- 
+	write('or'), nl,
 	no_clash(Ls),
 	transformation_or([], [], [], Lu, Ls, Abr), !.
 
 resolution([], Lpt, [], Lu, Ls, Abr) :- 
+	write('all'), nl,
 	no_clash(Ls),
 	deduction_all([], Lpt,[], Lu, Ls, Abr), !.
 
 resolution([], Lpt, Li, Lu, Ls, Abr) :- 
+	write('and'), nl,
 	no_clash(Ls),
 	transformation_and([], Lpt, Li, Lu, Ls, Abr), !.
 
 resolution(Lie, Lpt, Li, Lu, Ls, Abr) :- 
+	write('some'), nl,
 	no_clash(Ls),
 	complete_some(Lie, Lpt, Li, Lu, Ls, Abr), !.
 
@@ -266,6 +271,7 @@ resolution(Lie, Lpt, Li, Lu, Ls, Abr) :-
 % 	no_clash(Lu),
 % 	no_clash(Ls).
 
+% renvoie false s'il y a un clash
 no_clash(L) :- 
 	\+ clash(L).
 
@@ -274,7 +280,8 @@ clash([]) :- fail.
 % renvoie true quand il y a un clash
 clash([(I,C) | L]) :- 
 	nnf(not(C), C1),
-	member((I, C1), L), !.
+	member((I, C1), L), 
+		write('clash'), nl, !.
 
 % comme on n'est pas dans le premier cas, pas de clash, on étudie la  suite de la liste
 clash([_ | L]) :- 
@@ -354,9 +361,65 @@ evolue(A, Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, [A | Ls]).
 
 % TODO affichage
 % affiche_evolution_Abox(Ls1, Lie1, Lpt1, Li1, Lu1, Abr1, Ls2, Lie2, Lpt2, Li2, Lu2, Abr2).
+affiche_predicat(or(C1, C2)) :- 
+	affiche_predicat(C1),
+	write(' ⊔ '), 
+	affiche_predicat(C2).
 
+affiche_predicat(and(C1, C2)) :-
+	affiche_predicat(C1),
+	write(' ⊓ '),
+	affiche_predicat(C2).
 
+affiche_predicat(some(R, C)) :-
+	write(' ∃'),
+	write(R),
+	write(', '),
+	affiche_predicat(C).
 
+affiche_predicat(all(R, C)) :- 
+	write(' ∀'),
+	write(R),
+	write(', '),
+	affiche_predicat(C).
+
+affiche_predicat(not(C)) :-
+	write('¬'),
+	affiche_predicat(C).
+
+affiche_predicat(C) :-
+	write(C).
+
+% Cette version existe au cas où les caractères spéciaux ne s'affichent pas correctement comme chez moi 
+
+affiche_predicat_special(or(C1, C2)) :- 
+	affiche_predicat_special(C1),
+	write(' or '), 
+	affiche_predicat_special(C2), !.
+
+affiche_predicat_special(and(C1, C2)) :-
+	affiche_predicat_special(C1),
+	write(' and '),
+	affiche_predicat_special(C2), !.
+
+affiche_predicat_special(some(R, C)) :-
+	write(' some '),
+	write(R),
+	write(', '),
+	affiche_predicat_special(C), !.
+
+affiche_predicat_special(all(R, C)) :- 
+	write(' all '),
+	write(R),
+	write(', '),
+	affiche_predicat_special(C), !.
+
+affiche_predicat_special(not(C)) :-
+	write('not '),
+	affiche_predicat_special(C), !.
+
+affiche_predicat_special(C) :-
+	write(C), !.
 % ------------------------------------------------------- Utilitaires fournis ---------------------------------------------
 genere(Nom) :- compteur(V),nombre(V, L1),
 	concat([105,110,115,116], L1, L2),
