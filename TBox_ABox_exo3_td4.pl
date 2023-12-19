@@ -52,4 +52,4 @@ instR(vinci, joconde, aCree).
 % Abox assertions de concepts
 [(michelAnge,personne), (david,sculpture), (sonnets,livre), (vinci,personne), (joconde,objet)]
 % ABox assertions de roles
-[(michelAnge, david, aCree), (michelAnge, sonnet, aEcrit),(vinci, joconde, aCree)]
+[(michelAnge, david, aCree), (michelAnge, sonnets, aEcrit),(vinci, joconde, aCree)]

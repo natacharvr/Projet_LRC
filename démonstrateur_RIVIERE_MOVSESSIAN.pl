@@ -1,42 +1,52 @@
 compteur(1).
 
-premiere_etape([], [], []).
 premiere_etape(Tbox, Abi, Abr) :- 
-	verification_Abox(Abi, Abr),
-	verification_Tbox(Tbox),
-	autoref(TBox),
-	traitement_Abox(),
-	traitement_Tbox(TBox, TBox2).
-% TODO faire en sorte que le paramètre Tbox soit modifié par traitement_Tbox
+	% récupération de la Tbox initiale
+	setof((I1, I2), equiv(I1,I2), TboxI),
+	% récupération de la Abox de concept initiale
+	setof((I3, I4), inst(I3, I4), AbiI),
+	% récupération de la Abox de rôles initiale
+	setof((I5, I6, R1), instR(I5, I6, R1), Abr),
+
+	verification_Abox(AbiI, Abr),
+	verification_Tbox(TboxI),
+	autoref(TboxI),
+	traitement_Tbox(TboxI, Tbox),
+	traitement_Abox(AbiI, Abi), !.
+
 /* Vérification syntaxique et sémantique */
 
 concept(ConceptAtom) :- cnamea(ConceptAtom).
 concept(ConceptNonAtom) :- cnamena(ConceptNonAtom).
 
 % Vérification de la grammaire de ALC
-concept(not(C)) :- concept(C).
-concept(and(C1,C2)) :- concept(C1), concept(C2)!.
-concept(or(C1,C2)) :- concept(C1), concept(C2)!.
-concept(some(R,C)) :- rname(R), concept(C)!.
-concept(all(R,C)) :- rname(R), concept(C)!.
+% Remarque : on ne peux pas utiliser ?- concept(X). pour énumérer tous les cas car il y en a une infinité, d'où les ! pour arrêter le traitement 
+concept(not(C)) :- concept(C),!.
+concept(and(C1,C2)) :- concept(C1), concept(C2),!.
+concept(or(C1,C2)) :- concept(C1), concept(C2),!.
+concept(some(R,C)) :- rname(R), concept(C),!.
+concept(all(R,C)) :- rname(R), concept(C),!.
 
-% Verification de la TBox
+% Verification de la Tbox
 definition(C, C1) :- cnamea(C), concept(C1).
+definition(C, C1) :- cnamena(C), concept(C1),!.
+verification_Tbox([]).
 verification_Tbox([(C, C1) | L]) :- 
 	definition(C,C1),
 	verification_Tbox(L).
 
 % Vérification de la Abox
-instanceC(I,C) :- iname(I), concept(C).
-instanceR(R,C) :- rname(R), concept(C).
+instanceC(I,C) :- iname(I), concept(C),!.
+instanceR(C1, C2, R) :- iname(C1), iname(C2),rname(R),!.
 
 verification_Abox(AboxC, AboxR) :- verification_AboxC(AboxC), verification_AboxR(AboxR).
 verification_AboxC([]).
 verification_AboxC([(I, C) | L]) :- instanceC(I, C), verification_AboxC(L).
 verification_AboxR([]).
-verification_AboxR([(R, C) | L]) :- instanceR(R, C), verification_AboxR(L).
+verification_AboxR([(C1, C2, R) | L]) :- instanceR(C1, C2, R), verification_AboxR(L).
 
 /* Vérification auto référencement */
+% autoref renvoie true s'il n'y a pas de définition auto-référente
 autoref([]). % On lui fournit la Tbox
 autoref([(ConceptComplex, _)| L]) :- equiv(ConceptComplex, DefConceptComplex), pas_autoref(ConceptComplex, DefConceptComplex), autoref(L).
 
@@ -51,12 +61,13 @@ pas_autoref(C, not(C1)) :- pas_autoref(C,C1).
 
 % traitement_Tbox
 % developpement_atomique(C,D) est vrai si D est le développement atomique de C
+% TODO cas de base 
 developpement_atomique(C, C) :- 
-	cnamea(C).
+	cnamea(C), !.
 
 developpement_atomique(C, C1) :- 
 	equiv(C, Def), 
-	developpement_atomique(C, Def).
+	developpement_atomique(Def, C1).
 
 developpement_atomique(not(C1), not(C2)) :- 
 	developpement_atomique(C1, C2).
@@ -86,8 +97,12 @@ traitement_Tbox([(C, DefC) | L1], [(C, DefC1) | L2]) :-
 % traitement_Abox
 
 traitement_Abox([], []).
-% TODO traitement_Abox !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+% Exactement le même traitement que pour la Tbox, fait plus de calcul que si on récupérait dans la Tbox simplifiée mais est autonome
+traitement_Abox([(C, DefC) | L1], [(C, DefC1) | L2]) :- 
+	concept(DefC), 
+	developpement_atomique(DefC, C2), 
+	nnf(C2, DefC1), 
+	traitement_Abox(L1, L2).
 % Programme du démonstrateur :
 % Dans premiere_etape :
 % Tbox est la liste représentant la Tbox
@@ -110,7 +125,7 @@ programme :- premiere_etape(Tbox, Abi, Abr),
 
 % ------------------------------------------------------ DEUXIEME PARTIE -------------------------------------------------------- 
 
-% Code fourni
+% -------------------- Code fourni --------------------
 deuxieme_etape(Abi,Abi1,Tbox) :- saisie_et_traitement_prop_a_demontrer(Abi,Abi1,Tbox).
 
 saisie_et_traitement_prop_a_demontrer(Abi,Abi1,Tbox) :- nl,
@@ -125,16 +140,17 @@ saisie_et_traitement_prop_a_demontrer(Abi,Abi1,Tbox) :- nl,
 
 suite(1,Abi,Abi1,Tbox) :- acquisition_prop_type1(Abi,Abi1,Tbox),!.
 suite(2,Abi,Abi1,Tbox) :- acquisition_prop_type2(Abi,Abi1,Tbox),!.
-suite(R,Abi,Abi1,Tbox) :- nl,
+suite(_,Abi,Abi1,Tbox) :- nl,
 	write('Cette reponse est incorrecte.'),
 	nl,
 	saisie_et_traitement_prop_a_demontrer(Abi,Abi1,Tbox).
 
-% Code demandé
+% -------------------- Code demandé --------------------
 % Proposition de type 1
 lecture_prop_1(I, C) :- 
 	nl,
-	write('Votre proposition doit être de la forme I : C')
+	write('Votre proposition doit etre de la forme I : C'),
+	nl,
 	write('Entrez le nom de l`instance I :'),
 	nl,
 	read(I),
@@ -142,15 +158,15 @@ lecture_prop_1(I, C) :-
 	write('Entrez le nom du concept C :'),
 	nl,
 	read(C),
-	verification_lecture(C, I, V).
+	verification_lecture(C, I).
 
-verification_lecture(C, I, 1):- instanceC(I, C).
-verification_lecture(C, I, 0) :- 
+verification_lecture(C, I):- instanceC(I, C).
+verification_lecture(_, _) :- 
 	nl,
 	write('Votre entree est incorrecte, merci de recommencer.'),
-	fail.
+	fail, !.
 
-acquisition_prop_type1(Abi, [(I, NegDefC) |Abi1], TBox) :- 
+acquisition_prop_type1(Abi, [(I, NegDefC) |Abi], _) :- 
 	lecture_prop_1(I,C),
 	developpement_atomique(not(C), DefC),
 	nnf(DefC, NegDefC).
@@ -158,24 +174,24 @@ acquisition_prop_type1(Abi, [(I, NegDefC) |Abi1], TBox) :-
 % Proposition de type 2
 lecture_prop_2(C1, C2) :- 
 	nl,
-	write('Votre proposition doit être de la forme C1 ⊓ C2 ⊑ ⊥'),
+	write('Votre proposition doit etre de la forme C1 ⊓ C2 ⊑ ⊥'),
 	nl,
 	write('Entrez le nom du premier concept C1 :'),
 	nl,
 	read(C1),
 	nl,
-	write('Entrez le nom du deuxième concept C2 :'),
+	write('Entrez le nom du deuxieme concept C2 :'),
 	nl,
 	read(C2),
-	verification_lecture2(C1, C2, V).
+	verification_lecture2(C1, C2).
 
-verification_lecture2(C1, C2, 1):- concept(C1), concept(C2).
-verification_lecture(C1, C2, 0) :- 
+verification_lecture2(C1, C2):- concept(C1), concept(C2).
+verification_lecture2(_, _) :- 
 	nl,
 	write('Votre entree est incorrecte, merci de recommencer.'),
 	fail.
 
-acquisition_prop_type2(Abi, [(Inst, NegDefC) |Abi1], _) :- 
+acquisition_prop_type2(Abi, [(Inst, NegDefC) |Abi], _) :- 
 	lecture_prop_2(C1,C2),
 	genere(Inst),
 	developpement_atomique(C1, DefC1),
@@ -198,20 +214,22 @@ troisieme_etape(Abi,Abr) :-
 tri_Abox([], _, _, _, _, _).
 % ---- some -----
 tri_Abox([(I, some(R,C)) | Abi], [(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls) :-
-	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
 % ---- all ----
 tri_Abox([(I, all(R,C)) | Abi], Lie, [(I, all(R,C)) | Lpt], Li, Lu, Ls) :- 
-	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
 % ---- and ----
 tri_Abox([(I, and(C1, C2)) | Abi], Lie, Lpt, [(I, and(C1, C2)) | Li], Lu, Ls) :- 
-	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
 % ---- or ----
 tri_Abox([(I, or(C1, C2)) | Abi], Lie, Lpt, Li, [(I, or(C1, C2)) | Lu], Ls) :- 
-	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
 % ---- autre ----
 tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :- 
-	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls).
+	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
 
+% Donnée de test de tri_Abox
+% [(a, all(r,c)), (a, and(c, c)), (a, c), (a, or(c,c)), (a, some(r,c))]
 
 resolution([],[],[],[],[],[]).
 
@@ -222,52 +240,64 @@ resolution(Lie,Lpt,Li,Lu,Ls,Abr) :-
 	deduction_all(Lie,Lpt,Li,Lu,Ls,Abr),
 	transformation_or(Lie,Lpt,Li,Lu,Ls,Abr).
 
-no_clash(Lie,Lpt,Li,Lu,Ls,Abr) :- 
+% test de no_clash
+% no_clash([(a, some(r, c))], [(a, all(r, c))],  [(a, and(c, c))], [(a, or(c, c))], [(a, c)], []).
+% no_clash([(a,b),(a,not(b))]).
+% ?- no_clash([(a,and(b,c)), (a,or(not(b), not(c)))], [], [], [],[],[]).
+
+no_clash(Lie,Lpt,Li,Lu,Ls,_) :- 
 	no_clash(Lie),
 	no_clash(Lpt),
 	no_clash(Li),
 	no_clash(Lu),
 	no_clash(Ls).
 
-no_clash([]).
 no_clash(L) :- 
 	\+ clash(L).
 
 clash([]) :- fail.
 
+% renvoie true quand il y a un clash
 clash([(I,C) | L]) :- 
 	nnf(not(C), C1),
-	member((I, C1), L).
+	member((I, C1), L), !.
 
+% comme on n'est pas dans le premier cas, pas de clash, on étudie la  suite de la liste
 clash([_ | L]) :- 
 	clash(L).
 
-complete_some([],Lpt,Li,Lu,Ls,Abr).
+% ---------------------------------------------------------- RESTE A TESTER TODO ----------------------------------------------------------
+
+% complete_some(Lie,Lpt,Li,Lu,Ls,Abr).
+complete_some([],_,_,_,_,_).
 complete_some([(I, some(R,C)) | Lie],Lpt,Li,Lu,Ls,Abr) :- 
 	genere(Nom),
 	evolue((Nom, C), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	resolution( Lie1, Lpt1, Li1, Lu1, Ls1, [(I, Nom, R) | Abr]).
 
-transformation_and(Lie,Lpt,[],Lu,Ls,Abr).
+%transformation_and(Lie,Lpt,Li,Lu,Ls,Abr).
+transformation_and(_,_,[],_,_,_).
 transformation_and(Lie,Lpt,[(I, and(C1, C2)) | Li], Lu,Ls,Abr) :- 
 	evolue((I, C1), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	evolue((I, C2), Lie1, Lpt1, Li1, Lu1, Ls1, Lie2, Lpt2, Li2, Lu2, Ls2),
 	resolution(Lie2, Lpt2, Li2, Lu2, Ls2, Abr).
 
 % TODO je ne suis pas sûre que j'ai le droit de faire ce que je fais, est ce que ça fit bien dans un OU. Si ça fait partie de la liste je boucle, sinon je passe à autre chose 
-deduction_all(Lie,[],Li,Lu,Ls,Abr).
+% deduction_all(Lie,Lpt,Li,Lu,Ls,Abr).
+deduction_all(_,[],_,_,_,_).
 deduction_all(Lie,[(I, all(R,C)) | Lpt],Li,Lu,Ls,Abr) :-
 	member((I, B, R), Abr),
 	evolue((B, C), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	enleve((I,B,R), Abr, Abr1),
 	deduction_all(Lie1, [(I, all(R,C)) | Lpt1], Li1, Lu1, Ls1, Abr1).
 
-deduction_all(Lie,[(I, all(R,C)) | Lpt],Li,Lu,Ls,Abr) :-
-	\+ member((I, B, R), Abr), % Même pas forcément nécéssaire, si on est dans cette branche c'est que le test a échoué dans le précédent
-	resolution(Lie1, Lpt1, Li1, Lu1, Ls1, Abr1).
+deduction_all(Lie,[(_, all(_,_)) | Lpt],Li,Lu,Ls,Abr) :-
+	% \+ member((I, B, R), Abr), % Même pas forcément nécéssaire, si on est dans cette branche c'est que le test a échoué dans le précédent
+	resolution(Lie, Lpt, Li, Lu, Ls, Abr).
 
-transformation_or(Lie,Lpt,Li,[],Ls,Abr).
-transformation_or(Lie,Lpt,Li,Lu,Ls,Abr) :- 
+% transformation_or(Lie,Lpt,Li,Lu,Ls,Abr).
+transformation_or(_,_,_,[],_,_).
+transformation_or(Lie,Lpt,Li,[(I, or(C1, C2)) | Lu],Ls,Abr) :- 
 	evolue((I, C1), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	evolue((I, C2), Lie, Lpt, Li, Lu, Ls, Lie2, Lpt2, Li2, Lu2, Ls2),
 	resolution(Lie2, Lpt2, Li2, Lu2, Ls2, Abr),
@@ -311,8 +341,8 @@ evolue(A, Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :-
 evolue(A, Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, [A | Ls]).
 
 
-
-affiche_evolution_Abox(Ls1, Lie1, Lpt1, Li1, Lu1, Abr1, Ls2, Lie2, Lpt2, Li2, Lu2, Abr2)
+% TODO affichage
+% affiche_evolution_Abox(Ls1, Lie1, Lpt1, Li1, Lu1, Abr1, Ls2, Lie2, Lpt2, Li2, Lu2, Abr2).
 
 
 
