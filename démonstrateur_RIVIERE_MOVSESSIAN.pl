@@ -8,9 +8,18 @@ premiere_etape(Tbox, Abi, Abr) :-
 	% récupération de la Abox de rôles initiale
 	setof((I5, I6, R1), instR(I5, I6, R1), Abr),
 
+	write('Vérification de la Abox : '),
 	verification_Abox(AbiI, Abr),
+	write('ok'), nl,
+
+	write('Vérification de la Tbox : '),
 	verification_Tbox(TboxI),
+	write('ok'), nl,
+
+	write('Vérification auto référencement : '),
 	autoref(TboxI),
+	write('ok'), nl,
+
 	traitement_Tbox(TboxI, Tbox),
 	traitement_Abox(AbiI, Abi), !.
 
@@ -240,8 +249,9 @@ tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :-
 resolution(_,_,_,_,Ls,_) :- clash(Ls).
 
 resolution([],[],[],[], Ls,_) :- nl,
-	write('--------- Vérification finale de cette branche ---------'), nl,
-	no_clash(Ls), fail, !.
+	no_clash(Ls),
+	write('--------- Aucun clash détecté, la proposition n\'est pas démontrée ---------'), nl,
+	fail, !.
 
 resolution([], [], [], Lu, Ls, Abr) :- nl,
 	Lu \== [],
@@ -395,31 +405,31 @@ evolue(A, Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, [A | Ls]) :- !.
 affiche_predicat(or(C1, C2)) :- 
 	affiche_predicat(C1),
 	write(' ⊔ '), 
-	affiche_predicat(C2).
+	affiche_predicat(C2), !.
 
 affiche_predicat(and(C1, C2)) :-
 	affiche_predicat(C1),
 	write(' ⊓ '),
-	affiche_predicat(C2).
+	affiche_predicat(C2), !.
 
 affiche_predicat(some(R, C)) :-
 	write(' ∃'),
 	write(R),
 	write('.'),
-	affiche_predicat(C).
+	affiche_predicat(C), !.
 
 affiche_predicat(all(R, C)) :- 
 	write(' ∀'),
 	write(R),
 	write('.'),
-	affiche_predicat(C).
+	affiche_predicat(C), !.
 
 affiche_predicat(not(C)) :-
 	write('¬'),
-	affiche_predicat(C).
+	affiche_predicat(C), !.
 
 affiche_predicat(C) :-
-	write(C).
+	write(C), !.
 
 affiche_instance((A, B, R)) :-
 	write('('),
@@ -435,7 +445,8 @@ affiche_instance((I, C)) :-
 	write('('),
 	write(I),
 	write(' : '), 
-	affiche_predicat(C).
+	affiche_predicat(C)
+	write(')').
 
 affiche_suivant([]).
 
