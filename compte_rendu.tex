@@ -1,0 +1,306 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{xcolor}
+\definecolor{light-gray}{gray}{0.95}
+\newcommand{\code}[1]{\colorbox{light-gray}{\texttt{#1}}}
+\usepackage{geometry}
+\geometry{ margin=1in}
+\usepackage{minted}
+
+\title{Logique et Représentation des Connaissances \\ Projet : Ecriture en Prolog d'un démonstrateur basé sur l'algorithme des tableaux pour la logique de description \textit{ALC}}
+\author{\Large{Natacha Rivière - 28706745} \\ \Large{Léa Movsessian - 28624266}}
+\date{\Large{2023}}
+
+\begin{document}
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+
+        \Huge
+        \textbf{Logique et Représentation des Connaissances}
+
+        \vspace{0.5cm}
+        \LARGE
+        Écriture en Prolog d'un démonstrateur basé sur l'algorithme des tableaux pour la logique de description  $ \mathcal{ALC}$
+
+        \vspace{1.5cm}
+
+        Natacha Rivière - 28706745\\
+        Léa Movsessian - 28624266
+
+        \vfill
+
+
+
+        \normalsize
+
+        \textbf{Année :}
+        2023/2024
+        \hfill
+        \includegraphics[width=0.25\textwidth]{./logo.png}
+    \end{center}
+\end{titlepage}
+% \maketitle
+
+\clearpage
+\renewcommand{\contentsname}{Table des matières}
+\tableofcontents
+\clearpage
+
+\section{Introduction}
+L'objectif de ce projet est de construire en \code{Prolog} un démonstrateur de formule logique en se basant sur l'algorithme des tableaux pour la logique de description \textit{ALC}.
+\\\\
+Le projet est découpé en trois parties. Pour chaque partie, nous décrirons chacun des  prédicats que nous avons défini.
+\\\\
+Chaque partie correspond à une étape du démonstrateur, nommé \code{programme}.
+
+\begin{itemize}
+    \item Première étape
+
+    Correspond au travail effectué dans la partie 1.
+
+    Cette première étape consiste à vérifier la correction syntaxique et sémantique de la Tbox et de la Abox puis à les mettre en forme. Cela nous permet d'avoir une base de test pour le démonstrateur.
+    
+    \item Deuxième étape
+
+    Correspond au travail effectué dans la partie 2.
+
+    Cette deuxième étape consiste à récupérer la proposition à prouver à l'aide du démonstrateur. 
+
+    On traite deux possibilités : 
+    \begin{itemize}
+        \item Une proposition de type \code{I : C}
+        \item Une proposition de type \code{C1 $\sqcap$ C2 $\sqsubseteq \perp$}
+    \end{itemize}
+
+    Après avoir récupéré la proposition, on vérifie sa correction syntaxique et sémantique et on ajoute son opposé à la Abox.
+
+    \item Troisième étape
+
+    Correspond au travail effectué dans la partie 3.
+
+    Cette troisième et dernière étape consiste à implémenter l'algorithme de résolution basé sur la méthode des tableaux.
+
+    On implémente chaque règle selon ses spécificités ($\exists$, $\sqcap$, $\forall$, $\sqcup$).
+
+    On affiche l'évolution de la Abox pendant son traitement, puis on affiche le résultat.
+    
+\end{itemize}
+
+\subsection{Rappel des éléments fournis}
+Les données de la \textit{Abox} et de la \textit{Tbox} sont définies en utilisant les prédicats suivants:
+\begin{itemize}
+    \item \code{equiv(ConceptNonAtom,ConceptGen)} 
+    \item \code{inst(Instance,ConceptGen)}
+    \item \code{instR(Instance1, Instance2, role)}
+    \item \code{cnamea(ConceptAtom)}
+    \item \code{cnamena(ConceptNonAtom)}
+    \item \code{iname(Instance)}
+    \item \code{rname(Role)}
+\end{itemize}
+
+\subsection{Fonctionnement du démonstrateur}
+Pour utiliser le démonstrateur, il faut utiliser un interpréteur prolog, ici nous utilisons \textit{swipl}. Afin de lancer le programme, il faut tout d'abord charger un fichier dans lequel sont définis la \textit{Abox} et \textit{Tbox} dont nous allons nous servir.
+Les données fournies dans l'énoncé se trouvent dans le fichier \code{TBox\_ABox\_exo3\_td4.pl}.
+\\\\
+\noindent Voici un déroulé d'utilisation du démonstrateur :
+\begin{itemize}
+    \item Lancer l'interpréteur avec \code{swipl -s .\textbackslash TBox\_ABox\_exo3\_td4.pl}.
+    \item Charger le démonstrateur avec \code{[démonstrateur\_riviere\_movsessian].}
+    \item Lancer le démonstrateur avec la commande \code{programme.}
+    \item Suivez les instructions qui s'affichent.
+    \item Le programme vous affiche \code{Youpiiiiii, on a demontre la proposition initiale !!!
+true.} si votre proposition est démontrée, et \code{false} sinon.
+\end{itemize}
+
+
+
+\newpage
+\section{Partie 1 - Etape préliminaire de vérification et de mise en forme de la \textit{Tbox} et de la \textit{Abox}}
+L'objectif de cette prmière partie est de définir un analyseur sémantique et syntaxique des \textit{Abox} et des \textit{Tbox} qui seront fournies au démonstrateur.
+
+\subsection{Description des prédicats}
+\subsubsection{\code{premiere\_etape(Tbox, Abi, Abr)}}
+
+Ce prédicat est fait pour être utilisé avec trois inconnues en paramètre. Il récupère les données de la \textit{Tbox} et de la \textit{Abox} définies dans le fichier grâce au prédicat \code{setof}. Il vérifie ensuite la syntaxe et la sémantique de tous les éléments des listes qu'il extrait. Enfin, il renvoie ces listes dans lesquelles toutes les définitions sont développées au maximum et mises sous forme normale négative.
+
+\subsubsection{\code{concept(C)}}
+Vérifie que \textit{C} est bien un concept défini dans la \textit{Tbox} de notre démonstration. Il fonctionne récursivement jusqu'à arriver à un cas de base, avec \textit{C} un concept atomique ou non atomique. Ce prédicat ne peut être utilisé afin d'énumérer tous les concepts possibles car il y en a une infinité. On peut syntaxiquement construire un concept à l'infini en ajoutant des \code{not} devant un concept. Par conséquent, ce prédicat utilise le \code{cut} pour s'arrêter dès qu'une solution est trouvée. Cela permet d'éviter les boucles infinies.
+
+\subsubsection{\code{verification\_Tbox(L)}}
+Le prédicat \code{verification\_Tbox} parcourt récursivement la liste \textit{L} des définitions présentes dans la \textit{Tbox} jusqu'à ce qu'elle soit vide. À chaque itération, le premier élément de la liste est vérifié avec \code{definition}.
+\begin{itemize}
+    \item \code{definition(C1, C2)}
+    
+    Vérifie qu'un couple correspond bien à la définition d'un concept simple (au sens de n'utilisant pas d'opérateur). Il renvoie vrai lorsque \textit{C1} est un concept simple, et que \textit{C2} est un concept.
+\end{itemize}
+
+\subsubsection{\code{verification\_Abox(AboxC, AboxR)}}
+Le prédicat \code{verification\_Abox} prend en entrée deux listes, AboxC représente les assertions de concept et AboxR contient les assertions de rôle de la Abox à étudier. Il renvoie \textit{true} si les deux listes contiennent des éléments sémantiquement corrects. Il utilise les prédicats suivants pour effectuer les vérifications :
+\begin{itemize}
+    \item \code{instanceC\textbackslash2}
+
+    Vérifie si les paramètres fournis correspondent bien à une instanciation de concept.
+
+    \item \code{instanceR\textbackslash3}
+
+    Vérifie si les paramètres fournis correspondent bien à une instanciation de rôle.
+
+    \item \code{verification\_AboxC(L)}
+
+    Vérifie récursivement que tous les éléments d'une liste sont des assertions de concept.
+
+    \item \code{verification\_AboxR(L)}
+    
+    Vérifie récursivement que tous les éléments d'une liste sont des assertions de rôle.
+\end{itemize}
+
+\subsubsection{\code{autoref(L)}}
+Prend en entrée une liste \textit{L} représentant une Tbox. Renvoie \textit{true} si elle ne contient pas de définition auto-référente.
+
+\begin{itemize}
+
+    \item \code{pas\_autoref(C, C1)}
+
+    Développe les concepts non atomiques de \textit{C1}, s'il y en a. Renvoie \textit{false} si \textit{C} apparaît dans la définition de \textit{C1}. La récursion s'arrête lorsque \textit{C1} est atomique.
+\end{itemize}
+
+\subsubsection{\code{traitement\_Tbox(L1, L2)} / \code{traitement\_Abox(L1, L2)}}
+
+Ces deux prédicats fonctionnent de la même manière, et sont indépendants l'un de l'autre. Ils traitent récursivement une liste \textit{L1} et créent la liste \textit{L2}.
+\\\\
+Pour chaque couple \textit{(C, DefC)} de la liste \textit{L1}, on vérifie que \textit{DefC} est bien un concept avant de le décomposer au maximum afin de n'obtenir que des concepts atomiques. Ensuite on met l'expression trouvée sous forme normale négative. La liste \textit{L2} est alors constituée des couples formés de \textit{C} et de la forme normale négative de l'expression développée de \textit{DefC}.
+
+\begin{itemize}    
+    \item \code{developpement\_atomique(C, C1)}
+
+    Prend en entrée \textit{C} un concept, et constitue \textit{C1}, l'expression développée de \textit{C} ne contenant que des concepts atomiques. Renvoie \textit{true} si \textit{C1} est le développement atomique de \textit{C}.
+    
+\end{itemize}
+
+% \begin{minted}{prolog}
+%     tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
+% % ---- and ----
+% tri_Abox([(I, and(C1, C2)) | Abi], Lie, Lpt, [(I, and(C1, C2)) | Li], Lu, Ls) :- 
+% 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
+% % ---- or ----
+% tri_Abox([(I, or(C1, C2)) | Abi], Lie, Lpt, Li, [(I, or(C1, C2)) | Lu], Ls) :- 
+% 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
+% % ---- autre ----
+% tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :- 
+% 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
+% \end{minted}
+
+
+\clearpage
+
+\section{Partie 2 - Saisie de la proposition à démontrer}
+
+Cette partie a pour objectif d'acquérir la proposition que l'utilisateur souhaite démonter et de vérifier qu'elle est syntaxiquement et sémantiquement correcte.
+\subsection{Description des prédicats}
+
+\subsubsection{\code{acquisition\_prop\_type1(Abi, Abi1,Tbox)}}
+
+Permet de lire au clavier l'entrée de l'utilisateur du programme s'il décide d'entrer une proposition de la forme I : C. Si les données entrées par l'utilisateur ne sont pas valides, c'est à dire que ce ne sont pas un nom d'instance et de concepts connus, le prédicat renvoie \textit{false}. Il prend en entrée \textit{Abi} la liste des assertions de concept de la Abox et crée \textit{Abi1}, cette même liste à laquelle est ajoutée la négation de l'assertion entrée par l'utilisateur. Le troisième paramètre n'est pas utilisé. 
+
+\begin{itemize}
+
+    \item \code{lecture\_prop\_1(I,C)}
+
+    Lis l'entrée utilisateur au clavier et en vérifie la sémantique.
+    
+    \begin{itemize}
+        \item \code{verification\_lecture(I,C)}
+
+        Vérifie que I : C est bien une définition sémantiquement correcte d'instance. Échoue si ce n'est pas le cas, en affichant un message. 
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{\code{acquisition\_prop\_type2(Abi, Abi1,Tbox)}}
+
+Permet de lire au clavier l'entrée de l'utilisateur du programme s'il décide d'entrer une proposition de la forme $C1 \sqcap C2 \sqsubseteq \perp$. Si les données entrées par l'utilisateur ne sont pas valides, c'est à dire que ce ne sont des concepts connus, le prédicat renvoie \textit{false}. Il prend en entrée \textit{Abi} la liste des assertions de concept de la Abox et crée \textit{Abi1}, cette même liste à laquelle est ajoutée la négation de l'assertion entrée par l'utilisateur. Le troisième paramètre n'est pas utilisé. 
+
+\begin{itemize}
+
+    \item \code{lecture\_prop\_2(C1, C2)}
+
+    Lis l'entrée utilisateur au clavier et en vérifie la sémantique.
+    
+    \begin{itemize}
+        \item \code{verification\_lecture2(C1,C2)}
+
+        Vérifie que $C1 \sqcap C2 \sqsubseteq \perp$ est bien une définition sémantiquement correcte. Échoue si ce n'est pas le cas, en affichant un message. 
+    \end{itemize}
+\end{itemize}
+
+\clearpage
+
+\section{Partie 3 - Démonstration de la proposition}
+Cette partie traite de l'implémentation de la méthode des tableaux et de la démonstration de la proposition obtenue dans la partie 2.
+
+\subsection{Description des prédicats}
+
+\subsubsection{\code{tri\_Abox(Abi, Lie, Lpt, Li, Lu, Ls)}}
+
+Répartit les éléments de \textit{Abi}, la liste des assertions de concept de la Abox dans 5 listes différentes en fonction de leur structure. 
+\begin{itemize}
+    \item la liste \textit{Lie} des assertions du type \code{(I,some(R,C))}
+    \item la liste \textit{Lpt} des assertions du type \code{(I,all(R,C))}
+    \item la liste \textit{Li} des assertions du type \code{(I,and(C1,C2))}
+    \item la liste \textit{Lu} des assertions du type \code{(I,or(C1,C2))}
+    \item la liste \textit{Ls} des assertions restantes.
+\end{itemize}
+ On consière que toutes les assertions sont sémantiquement et syntaxiquement correctes, donc si on parvient au cas traitant les "autres" assertions, c'est qu'elles sont de type \code{(I,C)} ou \code{(I,not(C))} avec C un concept atomique. De plus, on utilise des \code{cut} pour empêcher prolog de considérer qu'il y a deux propositions possibles à tester.
+
+\subsubsection{\code{evolue(A, Lie1, Lpt1, Li1, Lu1, Ls1, Lie2, Lpt2, Li2, Lu2, Ls2)}}
+
+Intègre \textit{A} à la liste lui correspondant selon les mêmes critères que \code{tri\_Abox}. Ce prédicat n'ajoute pas \textit{A} à une liste s'il y est déjà présent. Il y a donc deux cas pour chaque forme possible. Dans le code, on retrouve d'abord celle où \textit{A} fait déjà partie de la liste où il devrait être rangé. Dans ce  cas là, un test d'appartenance est fait. Dans l'autre cas, aucun test n'est fait car, grâce à l'usage des \code{cut}, on peut être certains que si on arrive au deuxième cas, c'est que le précédent n'est pas passé, donc \textit{A} n'était pas déjà présent dans la Abox.
+ 
+\subsubsection{\code{complete\_some(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+Extrait le premier élément de la liste Lie, de la forme \code{a : $\exists$R.C}, l'affiche, et applique la règle $\exists$. Ajoute donc \code{<a,b> : R} et \code{b: C} où b est un nouvel objet généré grâce au prédicat \code{genere\textbackslash1}.
+\\\\
+Crée ensuite un nouveau noeud de l'arbre avec un appel à \code{resolution} avec les nouvelles listes mises à jour par \code{evolue}.
+
+\subsubsection{\code{transformation\_and(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+Extrait le premier élément de la liste Li, de la forme \code{a : C $\sqcap$ D}, l'affiche, et applique la règle $\sqcap$. Ajoute donc \code{a: C} et \code{a: D} aux assertions de concept.
+\\\\
+Crée ensuite un nouveau noeud de l'arbre avec un appel à \code{resolution} avec les nouvelles listes mises à jour par \code{evolue}.
+
+\subsubsection{\code{deduction\_all(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+Extrait le premier élément de la liste Lpt, de la forme \code{a: $\forall$R.C} l'affiche, et applique la règle $\forall$ autant de fois que possible en cherchant toutes les occurrences de relations de la forme \code{<a,b>: R}. Ajoute donc \code{b: C} aux assertions de concept. Tant qu'il est possible d'appliquer  \code{a: $\forall$R.C}, les assertions de rôle traitées sont retirées mais pas l'assertion de concept.
+\\\\
+Une fois toutes les assertions de rôle correspondantes traitées, \code{a: $\forall$R.C} est retiré des assertions de concept et on crée un nouveau noeud grâce à un appel à \code{résolution} avec les nouvelles listes mises à jour.
+
+\subsubsection{\code{transformation\_or(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+Extrait le premier élément de la liste Lu, de la forme \code{a : C $\sqcup$ D}, l'affiche, et applique la règle $\sqcup$.
+\\\\
+Cette règle crée deux nouveaux noeuds grâce à deux appels à \code{resolution}. Dans le premier, on ajoute l'assertion \code{a : C}, dans le deuxième \code{a : D}.
+
+\subsubsection{\code{resolution(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+Ce prédicat est essentiel au fonctionnement du démonstrateur. C'est grâce à lui que nous appliquons chaque règle de l'algorithme des tableaux. il prend en entrée 6 listes, les 5 premières correspondent aux listes triées par \code{tri\_Abox} et la dernière aux assertions de rôles. Ce prédicat utilise les règles dans l'ordre défini dans le sujet, même si les cas sont exposés dans l'ordre inverse dans le code. En effet, si la liste des assertions construites avec $\exists$ n'est pas vide, tous les cas précédemment définis sont passés, car ils requièrent une liste vide en premier argument. Le même principe s'applique pour toutes les autres règles. Cet ordre permet d'éviter que prolog n'appelle toutes les règles lorsqu'il constate qu'il n'y a pas de clash dans la branche étudiée, il ne peut pas faire de backtracking.
+
+\begin{itemize}
+    \item \code{no\_clash(L)}
+
+    Parcourt la liste \textit{L} et renvoie \textit{false} s'il y a un clash dans la liste. C'est à dire qu'il y a une assertion de la forme \code{I : C} et une autre de la forme \code{I :  not(C)}. Un clash est détecté par le prédicat \code{clash(L)} qui calcule la forme normale négative de \code{not(C)} et et teste son appartenance à \textit{L}. 
+
+    Si un clash est détecté, il y a alors un affichage pour le mettre en évidence.
+\end{itemize}
+
+\subsubsection{\code{affiche\_evolution\_Abox\textbackslash12}}
+
+Permet d'afficher le contenu de la Abox d'une étape sur l'autre. Les 6 premiers arguments sont les listes d'assertions dans le noeud précédent, les 6 suivants les listes mises à jour pour le noeud suivant.
+\\\\
+Ce prédicat utilise plusieurs prédicats annexes qu'il ne semble pas utile de développer.
+
+% \clearpage
+
+% \section{Tests}
+% ??? Si tu veux faire une partie qui explique comment tu as testé ton programme.
+
+\end{document}
