@@ -445,7 +445,7 @@ affiche_instance((I, C)) :-
 	write('('),
 	write(I),
 	write(' : '), 
-	affiche_predicat(C)
+	affiche_predicat(C),
 	write(')').
 
 affiche_suivant([]).
