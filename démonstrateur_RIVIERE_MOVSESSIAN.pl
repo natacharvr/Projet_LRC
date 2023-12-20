@@ -48,7 +48,7 @@ verification_AboxR([(C1, C2, R) | L]) :- instanceR(C1, C2, R), verification_Abox
 /* Vérification auto référencement */
 % autoref renvoie true s'il n'y a pas de définition auto-référente
 autoref([]). % On lui fournit la Tbox
-autoref([(ConceptComplex, _)| L]) :- equiv(ConceptComplex, DefConceptComplex), pas_autoref(ConceptComplex, DefConceptComplex), autoref(L).
+autoref([(ConceptComplex, DefConceptComplex)| L]) :- pas_autoref(ConceptComplex, DefConceptComplex), autoref(L).
 
 pas_autoref(C, C1) :- C \== C1, cnamea(C1).
 pas_autoref(C, C1) :- C \== C1, equiv(C1, C2), pas_autoref(C, C2). % Ici on ne précise pas que C1 est un concept non atomique, car on sait qu'il n'est pas atomique (clause précédente)
@@ -61,7 +61,6 @@ pas_autoref(C, not(C1)) :- pas_autoref(C,C1).
 
 % traitement_Tbox
 % developpement_atomique(C,D) est vrai si D est le développement atomique de C
-% TODO cas de base 
 developpement_atomique(C, C) :- 
 	cnamea(C), !.
 
@@ -109,8 +108,6 @@ traitement_Abox([(C, DefC) | L1], [(C, DefC1) | L2]) :-
 % Abi est la liste représentant les assertions de concepts de la Abox
 % Abr est la liste représentant les assertions de rôles de la Abox
 
-% J'imagine que premiere_etape doit appliquer à chaque element de la Tbox et de la Abox les prédicats définis plus haut et retourner zéro si l'un ne passe pas 
-
 % Dans deuxieme_etape :
 % Abi est la liste représentant les assertions de concepts initiales  de la Abox
 % Abi1 est la liste des assertions de concepts complétée après la soumission d’une proposition à démontrer
@@ -121,14 +118,14 @@ traitement_Abox([(C, DefC) | L1], [(C, DefC1) | L2]) :-
 % Abr est la liste des assertions de rôles qui peut également évoluer lors de la démonstration
 programme :- premiere_etape(Tbox, Abi, Abr),
 	write('\t Tbox : '),
-	affiche_liste_special(Tbox), nl,
+	affiche_liste(Tbox), nl,
 	write('\t Abr : '),
-	affiche_liste_special(Abr), nl,
+	affiche_liste(Abr), nl,
 	write('\t Abi : '),
-	affiche_liste_special(Abi), nl,
+	affiche_liste(Abi), nl,
 	deuxieme_etape(Abi, Abi1, Tbox),
 	% write('\t Abi1 : '),
-	% affiche_liste_special(Abi1), nl,
+	% affiche_liste(Abi1), nl,
 	troisieme_etape(Abi1, Abr).
 
 % ------------------------------------------------------ DEUXIEME PARTIE -------------------------------------------------------- 
@@ -216,7 +213,7 @@ acquisition_prop_type2(Abi, [(Inst, NegDefC) |Abi], _) :-
 
 troisieme_etape(Abi, Abr) :-
 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls),
-	affiche_etat_initial_Abox_special(Ls, Lie, Lpt, Li, Lu, Abr),
+	affiche_etat_initial_Abox(Ls, Lie, Lpt, Li, Lu, Abr),
 	resolution(Lie, Lpt, Li, Lu, Ls, Abr),
 	nl,write('Youpiiiiii, on a demontre la proposition initiale !!!').
 
@@ -249,25 +246,25 @@ resolution([],[],[],[], Ls,_) :- nl,
 resolution([], [], [], Lu, Ls, Abr) :- nl,
 	Lu \== [],
 	no_clash(Ls),
-	write('--------- Application de la règle ⊔ or ---------'), nl,
+	write('--------- Application de la règle ⊔ ---------'), nl,
 	transformation_or([], [], [], Lu, Ls, Abr), !.
 
 resolution([], Lpt, [], Lu, Ls, Abr) :- nl,
 	Lpt \== [],
 	no_clash(Ls),
-	write('--------- Application de la règle ∀ all ---------'), nl,
+	write('--------- Application de la règle ∀ ---------'), nl,
 	deduction_all([], Lpt,[], Lu, Ls, Abr), !.
 
 resolution([], Lpt, Li, Lu, Ls, Abr) :- nl,
 	Li\== [],
 	no_clash(Ls),
-	write('--------- Application de la règle ⊓ and ---------'), nl,
+	write('--------- Application de la règle ⊓ ---------'), nl,
 	transformation_and([], Lpt, Li, Lu, Ls, Abr), !.
 
 resolution(Lie, Lpt, Li, Lu, Ls, Abr) :- nl,
 	Lie \== [],
 	no_clash(Ls),
-	write('--------- Application de la règle ∃ some ---------'), nl,
+	write('--------- Application de la règle ∃ ---------'), nl,
 	complete_some(Lie, Lpt, Li, Lu, Ls, Abr), !.
 
 % Pour mieux comprendre l'ordre des cas de resolution, voir l'exemple suivant
@@ -275,16 +272,8 @@ resolution(Lie, Lpt, Li, Lu, Ls, Abr) :- nl,
 % test(L, C) :- write(1).
 
 % test de no_clash
-% no_clash([(a, some(r, c))], [(a, all(r, c))],  [(a, and(c, c))], [(a, or(c, c))], [(a, c)], []).
 % no_clash([(a,b),(a,not(b))]).
-% ?- no_clash([(a,and(b,c)), (a,or(not(b), not(c)))], [], [], [],[],[]).
-
-% no_clash(Lie, Lpt, Li, Lu, Ls,_) :- 
-% 	no_clash(Lie),
-% 	no_clash(Lpt),
-% 	no_clash(Li),
-% 	no_clash(Lu),
-% 	no_clash(Ls).
+% ?- no_clash([(a,and(b,c)), (a,or(not(b), not(c)))]).
 
 % renvoie false s'il y a un clash
 no_clash(L) :- 
@@ -297,25 +286,23 @@ clash([(I,C) | L]) :-
 	nnf(not(C), C1),
 	member((I, C1), L), 
 	write('Il y a le clash suivant : '), nl,
-	affiche_instance_special((I,C)),nl,
-	affiche_instance_special((I,C1)),nl,
-	 !.
+	affiche_instance((I,C)),nl,
+	affiche_instance((I,C1)),nl,
+	!.
 
 % comme on n'est pas dans le premier cas, pas de clash, on étudie la  suite de la liste
 clash([_ | L]) :- 
 	clash(L).
 
-% ---------------------------------------------------------- RESTE A TESTER TODO ----------------------------------------------------------
-
 % ------------- some -------------
 % complete_some(Lie, Lpt, Li, Lu, Ls, Abr).
 complete_some([(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls, Abr) :-
 	write('Instance étudiée : '),
-	affiche_instance_special((I, some(R,C))),nl,nl,
+	affiche_instance((I, some(R,C))),nl,nl,
 
 	genere(Nom), !,
 	evolue((Nom, C), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
-	affiche_evolution_Abox_special(Ls, [(I, some(R,C)) | Lie], Lpt, Li, Lu , Abr, Ls1, Lie1, Lpt1, Li1, Lu1, [(I, Nom, R) | Abr]),
+	affiche_evolution_Abox(Ls, [(I, some(R,C)) | Lie], Lpt, Li, Lu , Abr, Ls1, Lie1, Lpt1, Li1, Lu1, [(I, Nom, R) | Abr]),
 	resolution( Lie1, Lpt1, Li1, Lu1, Ls1, [(I, Nom, R) | Abr]).
 
 
@@ -323,30 +310,29 @@ complete_some([(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls, Abr) :-
 %transformation_and(Lie, Lpt, Li, Lu, Ls, Abr).
 transformation_and(Lie, Lpt,[(I, and(C1, C2)) | Li], Lu, Ls, Abr) :- 
 	write('Instance étudiée : '),
-	affiche_instance_special((I, and(C1, C2))),nl,nl,
+	affiche_instance((I, and(C1, C2))),nl,nl,
 	
 	evolue((I, C1), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	evolue((I, C2), Lie1, Lpt1, Li1, Lu1, Ls1, Lie2, Lpt2, Li2, Lu2, Ls2),
-	affiche_evolution_Abox_special(Ls, Lie, Lpt, [(I, and(C1, C2)) | Li], Lu , Abr, Ls2, Lie2, Lpt2, Li2, Lu2, Abr),
+	affiche_evolution_Abox(Ls, Lie, Lpt, [(I, and(C1, C2)) | Li], Lu , Abr, Ls2, Lie2, Lpt2, Li2, Lu2, Abr),
 	resolution(Lie2, Lpt2, Li2, Lu2, Ls2, Abr).
 
 % ------------- all -------------
-% TODO je ne suis pas sûre que j'ai le droit de faire ce que je fais, est ce que ça fit bien dans un OU. Si ça fait partie de la liste je boucle, sinon je passe à autre chose 
 % deduction_all(Lie, Lpt, Li, Lu, Ls, Abr).
 deduction_all(Lie,[(I, all(R,C)) | Lpt], Li, Lu, Ls, Abr) :-
 	member((I, B, R), Abr),
 	write('Instance étudiée : '),
-	affiche_instance_special((I, all(R,C)) ),nl,nl,
+	affiche_instance((I, all(R,C)) ),nl,nl,
 	evolue((B, C), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	enleve((I,B,R), Abr, Abr1),
-	affiche_evolution_Abox_special(Ls, Lie, [(I, all(R,C)) | Lpt], Li, Lu , Abr, Ls1, Lie1, [(I, all(R,C)) | Lpt1], Li1, Lu1, Abr1),
+	affiche_evolution_Abox(Ls, Lie, [(I, all(R,C)) | Lpt], Li, Lu , Abr, Ls1, Lie1, [(I, all(R,C)) | Lpt1], Li1, Lu1, Abr1),
 	deduction_all(Lie1, [(I, all(R,C)) | Lpt1], Li1, Lu1, Ls1, Abr1).
 
 deduction_all(Lie,[(I, all(R,C)) | Lpt], Li, Lu, Ls, Abr) :-
 	write('Instance étudiée : '),
-	affiche_instance_special((I, all(R,C)) ),nl,nl,
-	% \+ member((I, B, R), Abr), % Même pas forcément nécéssaire, si on est dans cette branche c'est que le test a échoué dans le précédent
-	affiche_evolution_Abox_special(Ls, Lie, [(I, all(R,C)) | Lpt], Li, Lu , Abr, Ls, Lie, Lpt, Li, Lu, Abr),
+	affiche_instance((I, all(R,C)) ),nl,nl,
+	\+ member((I, _, R), Abr),
+	affiche_evolution_Abox(Ls, Lie, [(I, all(R,C)) | Lpt], Li, Lu , Abr, Ls, Lie, Lpt, Li, Lu, Abr),
 	resolution(Lie, Lpt, Li, Lu, Ls, Abr).
 
 
@@ -354,17 +340,17 @@ deduction_all(Lie,[(I, all(R,C)) | Lpt], Li, Lu, Ls, Abr) :-
 % transformation_or(Lie, Lpt, Li, Lu, Ls, Abr).
 transformation_or(Lie, Lpt, Li,[(I, or(C1, C2)) | Lu], Ls, Abr) :- 
 	write('Instance étudiée : '),
-	affiche_instance_special((I, or(C1, C2))),nl,nl,
+	affiche_instance((I, or(C1, C2))),nl,nl,
 
 	evolue((I, C1), Lie, Lpt, Li, Lu, Ls, Lie1, Lpt1, Li1, Lu1, Ls1),
 	evolue((I, C2), Lie, Lpt, Li, Lu, Ls, Lie2, Lpt2, Li2, Lu2, Ls2),
 	write('--------------------- Cas 1 : ---------------------'), nl,
 
-	affiche_evolution_Abox_special(Ls, Lie, Lpt, Li, [(I, or(C1, C2)) | Lu] , Abr, Ls1, Lie1, Lpt1, Li1, Lu1, Abr),
+	affiche_evolution_Abox(Ls, Lie, Lpt, Li, [(I, or(C1, C2)) | Lu] , Abr, Ls1, Lie1, Lpt1, Li1, Lu1, Abr),
 	resolution(Lie1, Lpt1, Li1, Lu1, Ls1, Abr),
 
 	write('--------------------- Cas 2 : ---------------------'), nl,
-	affiche_evolution_Abox_special(Ls, Lie, Lpt, Li, [(I, or(C1, C2)) | Lu] , Abr, Ls2, Lie2, Lpt2, Li2, Lu2, Abr),
+	affiche_evolution_Abox(Ls, Lie, Lpt, Li, [(I, or(C1, C2)) | Lu] , Abr, Ls2, Lie2, Lpt2, Li2, Lu2, Abr),
 	resolution(Lie2, Lpt2, Li2, Lu2, Ls2, Abr).
 
 
@@ -377,7 +363,7 @@ transformation_or(Lie, Lpt, Li,[(I, or(C1, C2)) | Lu], Ls, Abr) :-
 evolue((I, some(R,C)), Lie, Lpt, Li, Lu, Ls, Lie, Lpt, Li, Lu, Ls) :- 
 	member((I, some(R,C)), Lie),!.
 
-% le test d'appartenance n'est pas nécéssaire car si la proposition ne correspond pas au prédicat précédent, c'est qu'il n'est pas dans la liste TODO vérifier
+% le test d'appartenance n'est pas nécéssaire car si la proposition ne correspond pas au prédicat précédent, c'est qu'il n'est pas dans la liste
 evolue((I, some(R,C)), Lie, Lpt, Li, Lu, Ls, [(I, some(R,C)) | Lie], Lpt, Li, Lu, Ls) :- !.
 
 % ---- all ----
@@ -419,13 +405,13 @@ affiche_predicat(and(C1, C2)) :-
 affiche_predicat(some(R, C)) :-
 	write(' ∃'),
 	write(R),
-	write(', '),
+	write('.'),
 	affiche_predicat(C).
 
 affiche_predicat(all(R, C)) :- 
 	write(' ∀'),
 	write(R),
-	write(', '),
+	write('.'),
 	affiche_predicat(C).
 
 affiche_predicat(not(C)) :-
@@ -494,7 +480,7 @@ affiche_etat_initial_Abox(Ls1, Lie1, Lpt1, Li1, Lu1, Abr1) :-
 	write('\tAbr : '), affiche_liste(Abr1), nl,
 	nl.
 
-% Cette version existe au cas où les caractères spéciaux ne s'affichent pas correctement comme chez moi 
+% Cette version existe au cas où les caractères spéciaux ne s'affichent pas correctement
 
 affiche_predicat_special(or(C1, C2)) :- 
 	affiche_predicat_special(C1),
@@ -509,13 +495,13 @@ affiche_predicat_special(and(C1, C2)) :-
 affiche_predicat_special(some(R, C)) :-
 	write(' some '),
 	write(R),
-	write(', '),
+	write('.'),
 	affiche_predicat_special(C), !.
 
 affiche_predicat_special(all(R, C)) :- 
 	write(' all '),
 	write(R),
-	write(', '),
+	write('.'),
 	affiche_predicat_special(C), !.
 
 affiche_predicat_special(not(C)) :-
