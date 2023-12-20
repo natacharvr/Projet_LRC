@@ -1,3 +1,6 @@
+% Natacha Rivière 28706745
+% Léa Movsessian 28624266
+
 compteur(1).
 
 premiere_etape(Tbox, Abi, Abr) :- 

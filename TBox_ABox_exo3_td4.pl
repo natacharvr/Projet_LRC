@@ -1,3 +1,6 @@
+% Natacha Rivière 28706745
+% Léa Movsessian 28624266
+
 % equiv(ConceptNonAtom, ConceptGen)
 % inst(Instance, ConceptGen)
 % instR(Instance1, Instance2, role)
@@ -48,8 +51,8 @@ instR(michelAnge, sonnets, aEcrit).
 instR(vinci, joconde, aCree).
 
 % Tbox
-[(sculpteur,and(personne,some(aCree,sculpture))), (auteur,and(personne,some(aEcrit,livre))), (editeur,and(personne,and(not(some(aEcrit,livre)),some(aEdite,livre)))),(parent,and(personne,some(aEnfant,anything)))]
-% Abox assertions de concepts
-[(michelAnge,personne), (david,sculpture), (sonnets,livre), (vinci,personne), (joconde,objet)]
-% ABox assertions de roles
-[(michelAnge, david, aCree), (michelAnge, sonnets, aEcrit),(vinci, joconde, aCree)]
+% [(sculpteur,and(personne,some(aCree,sculpture))), (auteur,and(personne,some(aEcrit,livre))), (editeur,and(personne,and(not(some(aEcrit,livre)),some(aEdite,livre)))),(parent,and(personne,some(aEnfant,anything)))]
+% % Abox assertions de concepts
+% [(michelAnge,personne), (david,sculpture), (sonnets,livre), (vinci,personne), (joconde,objet)]
+% % ABox assertions de roles
+% [(michelAnge, david, aCree), (michelAnge, sonnets, aEcrit),(vinci, joconde, aCree)]
