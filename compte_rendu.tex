@@ -119,23 +119,89 @@ true.} si votre proposition est démontrée, et \code{false} sinon.
 \section{Partie 1 - Etape préliminaire de vérification et de mise en forme de la \textit{Tbox} et de la \textit{Abox}}
 L'objectif de cette prmière partie est de définir un analyseur sémantique et syntaxique des \textit{Abox} et des \textit{Tbox} qui seront fournies au démonstrateur.
 
-\subsection{Description des prédicats}
-\subsubsection{\code{premiere\_etape(Tbox, Abi, Abr)}}
+\subsection{\code{premiere\_etape(Tbox, Abi, Abr)}}
+\subsubsection{Description}
 
 Ce prédicat est fait pour être utilisé avec trois inconnues en paramètre. Il récupère les données de la \textit{Tbox} et de la \textit{Abox} définies dans le fichier grâce au prédicat \code{setof}. Il vérifie ensuite la syntaxe et la sémantique de tous les éléments des listes qu'il extrait. Enfin, il renvoie ces listes dans lesquelles toutes les définitions sont développées au maximum et mises sous forme normale négative.
+\subsubsection{Jeux de tests}
+Avec les données fournies de l'énoncé :
+\begin{minted}{prolog}
+     ?- premiere_etape(X,Y,Z).
+Vérification de la Abox : ok
+Vérification de la Tbox : ok
+Vérification auto référencement : ok
+X = [(auteur, and(personne, some(aEcrit, livre))), (editeur, and(personne, and(all(aEcrit, not(livre)), 
+some(aEdite, livre)))), (parent, and(personne, some(aEnfant, anything))), (sculpteur, and(personne, 
+some(aCree, sculpture)))],
+Y = [(david, sculpture), (joconde, objet), (michelAnge, personne), (sonnets, livre), (vinci, personne)],
+Z = [(michelAnge, david, aCree), (michelAnge, sonnets, aEcrit), (vinci, joconde, aCree)].
+\end{minted}
 
-\subsubsection{\code{concept(C)}}
+Test sur une Tbox auto-référente : 
+\begin{minted}{prolog}
+equiv(nonbinaire, not(binaire)).
+equiv(binaire, not(nonbinaire)).
+
+    ?- premiere_etape(X,Y,Z).
+Vérification de la Abox : ok
+Vérification de la Tbox : ok
+Vérification auto référencement :
+false.
+    
+\end{minted}
+
+\subsection{\code{concept(C)}}
+\subsubsection{Description}
+
 Vérifie que \textit{C} est bien un concept défini dans la \textit{Tbox} de notre démonstration. Il fonctionne récursivement jusqu'à arriver à un cas de base, avec \textit{C} un concept atomique ou non atomique. Ce prédicat ne peut être utilisé afin d'énumérer tous les concepts possibles car il y en a une infinité. On peut syntaxiquement construire un concept à l'infini en ajoutant des \code{not} devant un concept. Par conséquent, ce prédicat utilise le \code{cut} pour s'arrêter dès qu'une solution est trouvée. Cela permet d'éviter les boucles infinies.
 
-\subsubsection{\code{verification\_Tbox(L)}}
+\subsubsection{Jeux de tests}
+Sur les données de l'énoncé
+\begin{minted}{prolog}
+    ?- concept(personne).
+true.
+
+    ?- concept(test).
+false.
+
+    ?- concept(not(some(aCree,sculpture))).
+true.
+\end{minted}
+
+\subsection{\code{verification\_Tbox(L)}}
+\subsubsection{Description}
+
 Le prédicat \code{verification\_Tbox} parcourt récursivement la liste \textit{L} des définitions présentes dans la \textit{Tbox} jusqu'à ce qu'elle soit vide. À chaque itération, le premier élément de la liste est vérifié avec \code{definition}.
 \begin{itemize}
     \item \code{definition(C1, C2)}
     
     Vérifie qu'un couple correspond bien à la définition d'un concept simple (au sens de n'utilisant pas d'opérateur). Il renvoie vrai lorsque \textit{C1} est un concept simple, et que \textit{C2} est un concept.
 \end{itemize}
+\subsubsection{Jeux de tests}
 
-\subsubsection{\code{verification\_Abox(AboxC, AboxR)}}
+\begin{minted}{prolog}
+    ?- verification_Tbox([]).
+true.
+\end{minted}
+Sur les données de l'énoncé :
+\begin{minted}{prolog}
+    ?- verification_Tbox([(sculpteur,and(personne,some(aCree,sculpture))), (auteur,and(personne,
+    some(aEcrit,livre))), (editeur,and(personne,and(not(some(aEcrit,livre)),some(aEdite,livre)))),
+    parent,and(personne,some(aEnfant,anything)))]).
+true.
+
+\end{minted}
+
+Sur une Tbox invalide :
+\begin{minted}{prolog}
+    ?- verification_Tbox([(sculpteur,and(personne,some(aCree,sculpture))), (auteur,and(not_a_concept,
+    some(aEcrit,livre)))]).
+false.
+\end{minted}
+
+\subsection{\code{verification\_Abox(AboxC, AboxR)}}
+\subsubsection{Description}
+
 Le prédicat \code{verification\_Abox} prend en entrée deux listes, AboxC représente les assertions de concept et AboxR contient les assertions de rôle de la Abox à étudier. Il renvoie \textit{true} si les deux listes contiennent des éléments sémantiquement corrects. Il utilise les prédicats suivants pour effectuer les vérifications :
 \begin{itemize}
     \item \code{instanceC\textbackslash2}
@@ -155,7 +221,27 @@ Le prédicat \code{verification\_Abox} prend en entrée deux listes, AboxC repr�
     Vérifie récursivement que tous les éléments d'une liste sont des assertions de rôle.
 \end{itemize}
 
-\subsubsection{\code{autoref(L)}}
+\subsubsection{Jeux de tests}
+\begin{minted}{prolog}
+    ?- verification_Abox([], []).
+true.
+\end{minted}
+
+Sur les données de l'énoncé :
+\begin{minted}{prolog}
+    ?- verification_Abox([(michelAnge,personne), (david,sculpture), (sonnets,livre), (vinci,personne), (joconde,objet)], 
+    [(michelAnge, david, aCree), (michelAnge, sonnets, aEcrit),(vinci, joconde, aCree)]).
+true.
+\end{minted}
+
+Sur une Abox invalide :
+\begin{minted}{prolog}
+    ?- verification_Abox([(michelAnge,personne),(not_an_instance, personne)], []).
+false.
+\end{minted}
+
+\subsection{\code{autoref(L)}}
+\subsubsection{Description}
 Prend en entrée une liste \textit{L} représentant une Tbox. Renvoie \textit{true} si elle ne contient pas de définition auto-référente.
 
 \begin{itemize}
@@ -165,7 +251,24 @@ Prend en entrée une liste \textit{L} représentant une Tbox. Renvoie \textit{tr
     Développe les concepts non atomiques de \textit{C1}, s'il y en a. Renvoie \textit{false} si \textit{C} apparaît dans la définition de \textit{C1}. La récursion s'arrête lorsque \textit{C1} est atomique.
 \end{itemize}
 
-\subsubsection{\code{traitement\_Tbox(L1, L2)} / \code{traitement\_Abox(L1, L2)}}
+\subsubsection{Jeux de tests}
+Pour tester ce prédicat il faut auparavant charger le fichier contenant la Tbox à étudier, car il se sert du prédicat \code{equiv} pour trouver les définitions de concepts.
+
+Sur une Tbox sans auto-référencement :
+\begin{minted}{prolog}
+    ?- autoref([(nonbinaire, and(not(femme), not(homme))), (binaire, or(femme, homme))]).
+true.
+\end{minted}
+
+Sur une Tbox auto-référente : 
+\begin{minted}{prolog}
+    ?- autoref([(nonbinaire, not(binaire)), (binaire, not(nonbinaire))]).
+false.
+\end{minted}
+
+
+\subsection{\code{traitement\_Tbox(L1, L2)} / \code{traitement\_Abox(L1, L2)}}
+\subsubsection{Description}
 
 Ces deux prédicats fonctionnent de la même manière, et sont indépendants l'un de l'autre. Ils traitent récursivement une liste \textit{L1} et créent la liste \textit{L2}.
 \\\\
@@ -178,28 +281,23 @@ Pour chaque couple \textit{(C, DefC)} de la liste \textit{L1}, on vérifie que \
     
 \end{itemize}
 
-% \begin{minted}{prolog}
-%     tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
-% % ---- and ----
-% tri_Abox([(I, and(C1, C2)) | Abi], Lie, Lpt, [(I, and(C1, C2)) | Li], Lu, Ls) :- 
-% 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
-% % ---- or ----
-% tri_Abox([(I, or(C1, C2)) | Abi], Lie, Lpt, Li, [(I, or(C1, C2)) | Lu], Ls) :- 
-% 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
-% % ---- autre ----
-% tri_Abox([A | Abi], Lie, Lpt, Li, Lu, [A | Ls]) :- 
-% 	tri_Abox(Abi, Lie, Lpt, Li, Lu, Ls), !.
-% \end{minted}
+\subsubsection{Jeux de tests}
 
+\begin{minted}{prolog}
+equiv(nonbinaire, and(not(femme), not(homme))).
+
+    ?- traitement_Tbox([(binaire, not(nonbinaire)], X).
+X = [(binaire, or(femme, homme))].
+\end{minted}
 
 \clearpage
 
 \section{Partie 2 - Saisie de la proposition à démontrer}
 
 Cette partie a pour objectif d'acquérir la proposition que l'utilisateur souhaite démonter et de vérifier qu'elle est syntaxiquement et sémantiquement correcte.
-\subsection{Description des prédicats}
 
-\subsubsection{\code{acquisition\_prop\_type1(Abi, Abi1,Tbox)}}
+\subsection{\code{acquisition\_prop\_type1(Abi, Abi1,Tbox)}}
+\subsubsection{Description}
 
 Permet de lire au clavier l'entrée de l'utilisateur du programme s'il décide d'entrer une proposition de la forme I : C. Si les données entrées par l'utilisateur ne sont pas valides, c'est à dire que ce ne sont pas un nom d'instance et de concepts connus, le prédicat renvoie \textit{false}. Il prend en entrée \textit{Abi} la liste des assertions de concept de la Abox et crée \textit{Abi1}, cette même liste à laquelle est ajoutée la négation de l'assertion entrée par l'utilisateur. Le troisième paramètre n'est pas utilisé. 
 
@@ -216,7 +314,30 @@ Permet de lire au clavier l'entrée de l'utilisateur du programme s'il décide d
     \end{itemize}
 \end{itemize}
 
-\subsubsection{\code{acquisition\_prop\_type2(Abi, Abi1,Tbox)}}
+\subsubsection{Jeux de tests}
+
+Afin de tester ce prédicat, voici les données à utiliser, en ayant chargé les données de l'énoncé :
+\begin{minted}{prolog}
+    michelAnge.
+    sculpteur.
+true
+
+    not_an_instance.
+    sculpteur.
+false.
+
+    michelAnge.
+    not_a_concept.
+false.
+
+    not_an_instance.
+    not_a_concept.
+false.
+\end{minted}
+
+
+\subsection{\code{acquisition\_prop\_type2(Abi, Abi1,Tbox)}}
+\subsubsection{Description}
 
 Permet de lire au clavier l'entrée de l'utilisateur du programme s'il décide d'entrer une proposition de la forme $C1 \sqcap C2 \sqsubseteq \perp$. Si les données entrées par l'utilisateur ne sont pas valides, c'est à dire que ce ne sont des concepts connus, le prédicat renvoie \textit{false}. Il prend en entrée \textit{Abi} la liste des assertions de concept de la Abox et crée \textit{Abi1}, cette même liste à laquelle est ajoutée la négation de l'assertion entrée par l'utilisateur. Le troisième paramètre n'est pas utilisé. 
 
@@ -232,15 +353,35 @@ Permet de lire au clavier l'entrée de l'utilisateur du programme s'il décide d
         Vérifie que $C1 \sqcap C2 \sqsubseteq \perp$ est bien une définition sémantiquement correcte. Échoue si ce n'est pas le cas, en affichant un message. 
     \end{itemize}
 \end{itemize}
+\subsubsection{Jeux de tests}
+
+Afin de tester ce prédicat, voici les données à entrer lorsqu'elles vous sont demandées, en ayant chargé les données de l'énoncé :
+\begin{minted}{prolog}
+    sculpteur.
+    sculpture.
+true
+
+    not_a_concept.
+    sculpteur.
+false.
+
+    parent.
+    not_a_concept.
+false.
+
+    not_a_concept.
+    not_a_conept.
+false.
+\end{minted}
 
 \clearpage
 
 \section{Partie 3 - Démonstration de la proposition}
 Cette partie traite de l'implémentation de la méthode des tableaux et de la démonstration de la proposition obtenue dans la partie 2.
 
-\subsection{Description des prédicats}
 
-\subsubsection{\code{tri\_Abox(Abi, Lie, Lpt, Li, Lu, Ls)}}
+\subsection{\code{tri\_Abox(Abi, Lie, Lpt, Li, Lu, Ls)}}
+\subsubsection{Description}
 
 Répartit les éléments de \textit{Abi}, la liste des assertions de concept de la Abox dans 5 listes différentes en fonction de leur structure. 
 \begin{itemize}
@@ -251,36 +392,82 @@ Répartit les éléments de \textit{Abi}, la liste des assertions de concept de 
     \item la liste \textit{Ls} des assertions restantes.
 \end{itemize}
  On consière que toutes les assertions sont sémantiquement et syntaxiquement correctes, donc si on parvient au cas traitant les "autres" assertions, c'est qu'elles sont de type \code{(I,C)} ou \code{(I,not(C))} avec C un concept atomique. De plus, on utilise des \code{cut} pour empêcher prolog de considérer qu'il y a deux propositions possibles à tester.
+\subsubsection{Jeux de tests}
+\begin{minted}{prolog}
+    ?- tri_Abox([(a, and(b,c)), (a, some(r, c)), (h, all(r1, c1)), (a, b), (a, not(c)), (a, or(b,c))], Lie, Lpt, Li, Lu, Ls).
+Lie = [(a, some(r, c))|_],
+Lpt = [(h, all(r1, c1))|_],
+Li = [(a, and(b, c))|_],
+Lu = [(a, or(b, c))|_],
+Ls = [(a, b), (a, not(c))|_].
+\end{minted}
 
-\subsubsection{\code{evolue(A, Lie1, Lpt1, Li1, Lu1, Ls1, Lie2, Lpt2, Li2, Lu2, Ls2)}}
+\subsection{\code{evolue(A, Lie1, Lpt1, Li1, Lu1, Ls1, Lie2, Lpt2, Li2, Lu2, Ls2)}}
 
+\subsubsection{Description}
 Intègre \textit{A} à la liste lui correspondant selon les mêmes critères que \code{tri\_Abox}. Ce prédicat n'ajoute pas \textit{A} à une liste s'il y est déjà présent. Il y a donc deux cas pour chaque forme possible. Dans le code, on retrouve d'abord celle où \textit{A} fait déjà partie de la liste où il devrait être rangé. Dans ce  cas là, un test d'appartenance est fait. Dans l'autre cas, aucun test n'est fait car, grâce à l'usage des \code{cut}, on peut être certains que si on arrive au deuxième cas, c'est que le précédent n'est pas passé, donc \textit{A} n'était pas déjà présent dans la Abox.
- 
-\subsubsection{\code{complete\_some(Lie, Lpt, Li, Lu, Ls, Abr)}}
 
+ \subsubsection{Jeux de test}
+
+\begin{minted}{prolog}
+    ?- evolue([(a, some(b,c))], [],[], [], [], [], Lie, Lpt, Li, Lu, Ls).
+Lie = Lpt, Lpt = Li, Li = Lu, Lu = [],
+Ls = [[(a, some(b, c))]].
+
+    ?- evolue([(a, all(b,c))], [],[], [], [], [], Lie, Lpt, Li, Lu, Ls).
+Lie = Lpt, Lpt = Li, Li = Lu, Lu = [],
+Ls = [[(a, all(b, c))]].
+
+
+    ?- evolue([(a, and(b,c))], [],[], [], [], [], Lie, Lpt, Li, Lu, Ls).
+Lie = Lpt, Lpt = Li, Li = Lu, Lu = [],
+Ls = [[(a, and(b, c))]].
+
+    ?- evolue([(a, or(b,c))], [],[], [], [], [], Lie, Lpt, Li, Lu, Ls).
+Lie = Lpt, Lpt = Li, Li = Lu, Lu = [],
+Ls = [[(a, or(b, c))]].
+
+    ?- evolue([(a, b)], [],[], [], [], [], Lie, Lpt, Li, Lu, Ls).
+Lie = Lpt, Lpt = Li, Li = Lu, Lu = [],
+Ls = [[(a, b)]].
+
+    ?- evolue([(a, not(b))], [],[], [], [], [], Lie, Lpt, Li, Lu, Ls).
+Lie = Lpt, Lpt = Li, Li = Lu, Lu = [],
+Ls = [[(a, not(b))]].
+\end{minted}
+ 
+\subsection{\code{complete\_some(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+\subsubsection{Description}
 Extrait le premier élément de la liste Lie, de la forme \code{a : $\exists$R.C}, l'affiche, et applique la règle $\exists$. Ajoute donc \code{<a,b> : R} et \code{b: C} où b est un nouvel objet généré grâce au prédicat \code{genere\textbackslash1}.
 \\\\
 Crée ensuite un nouveau noeud de l'arbre avec un appel à \code{resolution} avec les nouvelles listes mises à jour par \code{evolue}.
 
-\subsubsection{\code{transformation\_and(Lie, Lpt, Li, Lu, Ls, Abr)}}
+\subsection{\code{transformation\_and(Lie, Lpt, Li, Lu, Ls, Abr)}}
 
+\subsubsection{Description}
 Extrait le premier élément de la liste Li, de la forme \code{a : C $\sqcap$ D}, l'affiche, et applique la règle $\sqcap$. Ajoute donc \code{a: C} et \code{a: D} aux assertions de concept.
 \\\\
 Crée ensuite un nouveau noeud de l'arbre avec un appel à \code{resolution} avec les nouvelles listes mises à jour par \code{evolue}.
 
-\subsubsection{\code{deduction\_all(Lie, Lpt, Li, Lu, Ls, Abr)}}
+\begin{itemize}
+    \item \code{deduction\_all(Lie, Lpt, Li, Lu, Ls, Abr)}
 
-Extrait le premier élément de la liste Lpt, de la forme \code{a: $\forall$R.C} l'affiche, et applique la règle $\forall$ autant de fois que possible en cherchant toutes les occurrences de relations de la forme \code{<a,b>: R}. Ajoute donc \code{b: C} aux assertions de concept. Tant qu'il est possible d'appliquer  \code{a: $\forall$R.C}, les assertions de rôle traitées sont retirées mais pas l'assertion de concept.
-\\\\
-Une fois toutes les assertions de rôle correspondantes traitées, \code{a: $\forall$R.C} est retiré des assertions de concept et on crée un nouveau noeud grâce à un appel à \code{résolution} avec les nouvelles listes mises à jour.
+    Extrait le premier élément de la liste Lpt, de la forme \code{a: $\forall$R.C} l'affiche, et applique la règle $\forall$ autant de fois que possible en cherchant toutes les occurrences de relations de la forme \code{<a,b>: R}. Ajoute donc \code{b: C} aux assertions de concept. Tant qu'il est possible d'appliquer  \code{a: $\forall$R.C}, les assertions de rôle traitées sont retirées mais pas l'assertion de concept.
+    
+    Une fois toutes les assertions de rôle correspondantes traitées, \code{a: $\forall$R.C} est retiré des assertions de concept et on crée un nouveau noeud grâce à un appel à \code{résolution} avec les nouvelles listes mises à jour.
+\end{itemize}
 
-\subsubsection{\code{transformation\_or(Lie, Lpt, Li, Lu, Ls, Abr)}}
+\subsection{\code{transformation\_or(Lie, Lpt, Li, Lu, Ls, Abr)}}
 
+\subsubsection{Description}
 Extrait le premier élément de la liste Lu, de la forme \code{a : C $\sqcup$ D}, l'affiche, et applique la règle $\sqcup$.
 \\\\
 Cette règle crée deux nouveaux noeuds grâce à deux appels à \code{resolution}. Dans le premier, on ajoute l'assertion \code{a : C}, dans le deuxième \code{a : D}.
 
-\subsubsection{\code{resolution(Lie, Lpt, Li, Lu, Ls, Abr)}}
+\subsection{\code{resolution(Lie, Lpt, Li, Lu, Ls, Abr)}}
+
+\subsubsection{Description}
 
 Ce prédicat est essentiel au fonctionnement du démonstrateur. C'est grâce à lui que nous appliquons chaque règle de l'algorithme des tableaux. il prend en entrée 6 listes, les 5 premières correspondent aux listes triées par \code{tri\_Abox} et la dernière aux assertions de rôles. Ce prédicat utilise les règles dans l'ordre défini dans le sujet, même si les cas sont exposés dans l'ordre inverse dans le code. En effet, si la liste des assertions construites avec $\exists$ n'est pas vide, tous les cas précédemment définis sont passés, car ils requièrent une liste vide en premier argument. Le même principe s'applique pour toutes les autres règles. Cet ordre permet d'éviter que prolog n'appelle toutes les règles lorsqu'il constate qu'il n'y a pas de clash dans la branche étudiée, il ne peut pas faire de backtracking.
 
@@ -292,15 +479,58 @@ Ce prédicat est essentiel au fonctionnement du démonstrateur. C'est grâce à 
     Si un clash est détecté, il y a alors un affichage pour le mettre en évidence.
 \end{itemize}
 
-\subsubsection{\code{affiche\_evolution\_Abox\textbackslash12}}
+\subsection{\code{affiche\_evolution\_Abox\textbackslash12}}
+
+\subsubsection{Description}
 
 Permet d'afficher le contenu de la Abox d'une étape sur l'autre. Les 6 premiers arguments sont les listes d'assertions dans le noeud précédent, les 6 suivants les listes mises à jour pour le noeud suivant.
 \\\\
 Ce prédicat utilise plusieurs prédicats annexes qu'il ne semble pas utile de développer.
 
-% \clearpage
+\subsection{Jeux de test}
 
-% \section{Tests}
-% ??? Si tu veux faire une partie qui explique comment tu as testé ton programme.
+Comme tous les prédicats de cette partie sont interdépendants, nous avons utilisé un Jeux de test pour les tester tous ensemble. Pour tester cette partie, nous avons utilisé le fichier \code{tbox\_test} dans lequel nous avons crée une Tbox et une Abox tels que :
+
+\begin{minted}{prolog}
+cnamea(femme).
+cnamea(homme).
+
+cnamena(nonbinaire).
+cnamena(binaire).
+
+iname(stephane).
+iname(marie).
+
+equiv(nonbinaire, and(not(femme), not(homme))).
+equiv(binaire, or(femme, homme)).
+
+inst(stephane, nonbinaire).
+inst(marie, femme).
+inst(stephane, all(epouse, femme)).
+inst(marie, some(epouse, not(homme))).
+
+rname(epouse).
+
+instR(stephane, marie, epouse).
+\end{minted}
+
+\code{Tbox : [(binaire : femme $\sqcup$ homme), (nonbinaire : $\lnot$femme  $\sqcap$ $\lnot$homme)]}
+
+\code{Abr : [(<stephane, marie> :epouse)]}
+
+\code{Abi : [(marie : femme), (stephane : nonbinaire), (stephane : $\forall$epouse.femme), }\\\code{(marie : $\exists$epouse.$\lnot$homme)]}
+\\\\
+
+Afin de vérifier que chacune des règles est appliqué correctement, on peut tester le programme avec les données suivantes :
+\begin{itemize}
+    \item 
+La proposition \code{(binaire $\sqcap$ nonbinaire $\sqsubseteq \perp$) }permet de déclencher les quatre règles. Elles se déclenchent dans l'ordre indiqué dans le sujet et s'appliquent correctement. La proposition est vraie et le programme renvoie \textit{true} comme prévu.
+ \item La proposition \code{ (marie : $\lnot$femme) }permet de déclencher les règles $\exists$, $\sqcap$ et $\forall$ et renvoie bien \textit{false}.
+En étudiant le déroulé de la démonstration, on constate que les règles s'appliquent correctement et dans le bon ordre.
+\end{itemize}
+
+Ces deux tests couvrent l'utilisation de tous les prédicats et utilise les deux types de formules possibles. Le programme ne traite pas de cas inutiles et s'arrête dès qu'il détecte une feuille qui n'a pas de clash. 
+\\\\
+Le démonstrateur est donc fonctionnel.
 
 \end{document}
